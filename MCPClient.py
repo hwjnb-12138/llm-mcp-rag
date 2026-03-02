@@ -1,3 +1,4 @@
+from typing import Any
 import asyncio
 from typing import Optional
 from contextlib import AsyncExitStack
@@ -22,9 +23,9 @@ class MCPClient:
     async def cleanup(self):
         """Clean up resources"""
         await self.exit_stack.aclose()
-    
-    async def getTools(self):
-        return self.tools
+
+    async def callTool(self, name: str, args: dict[str, Any]):
+        return await self.session.call_tool(name, args)
 
     async def connectToServer(self):
         """Connect to an MCP server"""
@@ -48,8 +49,7 @@ class MCPClient:
 async def example():
     mcp = MCPClient("fetch", "uvx", ["mcp-server-fetch"])
     await mcp.init()
-    tools = await mcp.getTools()
-    print(tools)
+    print(mcp.tools)
     await mcp.cleanup()
 
 if __name__ == "__main__":

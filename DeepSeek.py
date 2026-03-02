@@ -6,13 +6,12 @@ from openai import OpenAI
 load_dotenv()  # 加载 .env 文件中的环境变量
 
 class DeepSeek():
-    deepseek: OpenAI
-    messages = []
 
     def __init__(self, model: str, tools = [], prompt: str = "", context: str = ""):
         self.deepseek = OpenAI(api_key = os.getenv("DS_API_KEY"), base_url = os.getenv("DS_BASE_URL"))
         self.model = model
         self.tools = tools
+        self.messages = []
         if prompt:
              self.messages.append({"role": "system", "content": prompt})
         if context:
@@ -80,9 +79,9 @@ class DeepSeek():
             {
                 "type": "function",
                 "function": {
-                    "name": tool["name"],
-                    "description": tool["description"],
-                    "parameters": tool["inputSchema"]
+                    "name": tool.name,
+                    "description": tool.description,
+                    "parameters": tool.inputSchema
                 }
             } for tool in self.tools
         ]
@@ -90,7 +89,7 @@ class DeepSeek():
     def appendToolResult(self, toolCallId: str, toolResult: str):
         self.messages.append({
             "role": "tool",
-            "tool_call_id": toolCallId
+            "tool_call_id": toolCallId,
             "content": toolResult
         })
 
