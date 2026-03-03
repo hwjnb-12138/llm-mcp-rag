@@ -21,8 +21,9 @@ class MCPClient:
         await self.connectToServer()
 
     async def cleanup(self):
-        """Clean up resources"""
+        # Close the exit stack which includes session and transport
         await self.exit_stack.aclose()
+        print(f"Closed connection to {self.name}")
 
     async def callTool(self, name: str, args: dict[str, Any]):
         return await self.session.call_tool(name, args)

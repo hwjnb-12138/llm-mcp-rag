@@ -25,11 +25,15 @@ class Agent():
     async def close(self):
         for client in self.mcpClients:
             await client.cleanup()
+        if self.deepSeek:
+            await self.deepSeek.close()
     
     async def invoke(self, prompt: str):
         if not self.deepSeek:
             raise Exception("Agent not initialized")
         
+        # Ensure context is handled correctly in DeepSeek initialization if needed
+        # But here we just proceed with the chat
         res = await self.deepSeek.chat(prompt)
 
         while True:
@@ -48,7 +52,7 @@ class Agent():
                         self.deepSeek.appendToolResult(toolCall["id"], "Tool Not Found")
                 res = await self.deepSeek.chat("")
                 continue
-            await self.close()
+            
             return res["content"]
 
 async def example():
