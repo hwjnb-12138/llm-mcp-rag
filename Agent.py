@@ -3,6 +3,7 @@ import os
 import asyncio
 from MCPClient import MCPClient
 from DeepSeek import DeepSeek
+from contextlib import AsyncExitStack, asynccontextmanager
 
 class Agent():
     def __init__(self, model: str, mcpClients: list[MCPClient], sysPrompt: str = "", context: str = ""):
@@ -12,21 +13,24 @@ class Agent():
         self.context = context
         self.deepSeek = None
     
-    async def init(self):
-        for mcp in self.mcpClients:
-            await mcp.init()
-        
-        tools = []
-        for mcp in self.mcpClients:
-            tools.extend(mcp.tools)
-        
-        self.deepSeek = DeepSeek(self.model, tools, self.sysPrompt, self.context)
-    
-    async def close(self):
-        for client in self.mcpClients:
-            await client.cleanup()
-        if self.deepSeek:
-            await self.deepSeek.close()
+    @asynccontextmanager
+    async def session(self):
+        async with AsyncExitStack() as stack:
+            for mcp in self.mcpClients:
+                await stack.enter_async_context(mcp.server_session())
+            
+            tools = []
+            for mcp in self.mcpClients:
+                tools.extend(mcp.tools)
+            
+            self.deepSeek = DeepSeek(self.model, tools, self.sysPrompt, self.context)
+            
+            try:
+                yield self
+            finally:
+                if self.deepSeek:
+                    await self.deepSeek.close()
+                    self.deepSeek = None
     
     async def invoke(self, prompt: str):
         if not self.deepSeek:
@@ -62,10 +66,9 @@ async def example():
         "@modelcontextprotocol/server-filesystem",
         currentDirectory])
     agent = Agent("deepseek-chat", [fetchMCP, fileMCP])
-    await agent.init()
-    res = await agent.invoke(f"爬取 https://news.ycombinator.com 的内容, 并且总结后保存在 {currentDirectory} 目录下的news.md文件中")
-    print(res)
-    await agent.close()
+    async with agent.session():
+        res = await agent.invoke(f"爬取 https://news.ycombinator.com 的内容, 并且总结后保存在 {currentDirectory} 目录下的news.md文件中")
+        print(res)
 
 if __name__ == "__main__":
     asyncio.run(example())

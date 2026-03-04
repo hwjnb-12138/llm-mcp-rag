@@ -1,5 +1,5 @@
 import os
-import anyio
+import asyncio
 from Agent import Agent
 from MCPClient import MCPClient
 from Embedding import Embedding
@@ -28,12 +28,9 @@ async def example():
     
     context = await embedding.search(prompt)
     agent = Agent("deepseek-chat", [fetchMCP, fileMCP], context=context)
-    await agent.init()
-    res = await agent.invoke(prompt)
-    print(res)
-    await agent.close()
+    async with agent.session():
+        res = await agent.invoke(prompt)
+        print(res)
 
 if __name__ == "__main__":
-    # 采用 anyio.run 替代原始的 asyncio.run。这是解决 mcp 底层库 anyio 在资源关闭时触发
-    #  RuntimeError 的标准方案，能有效处理任务组和取消作用域的退出逻辑。
-    anyio.run(example)
+    asyncio.run(example())
